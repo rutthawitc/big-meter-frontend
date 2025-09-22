@@ -27,3 +27,6 @@ coverage/
 # Vercel/Netlify
 .vercel/
 netlify/
+
+# TypeScript build info
+*.tsbuildinfo

@@ -25,7 +25,7 @@ export default function App() {
       <div className="navbar bg-base-100 shadow">
         <div className="flex-1 px-2 text-xl font-semibold">Big Meter</div>
         <div className="flex-none flex items-center gap-2">
-          <Link className="btn btn-ghost btn-sm" to="/details">Details</Link>
+          {/* Details page removed */}
           <ThemeToggle />
           <a className="btn btn-primary btn-sm" href="https://vitejs.dev" target="_blank" rel="noreferrer">Vite</a>
         </div>
