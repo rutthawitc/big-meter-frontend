@@ -1,18 +1,18 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Stack: Vite + React 19, TypeScript, TanStack Query, TailwindCSS + daisyUI.
+- Stack: Vite + React 19, TypeScript, TailwindCSS (no daisyUI).
 - Layout:
   - `index.html`, `vite.config.ts`, `tsconfig.json`.
   - `src/main.tsx` (bootstraps `QueryClientProvider`), `src/App.tsx`.
-  - `src/components/`, `src/features/<domain>/` (UI + hooks), `src/api/` (query fns), `src/lib/` (utils).
+  - `src/components/` (UI), `src/lib/` (utils). Details page will be re-created.
   - `src/styles/` with `index.css` (Tailwind base, components, utilities).
   - `public/` static assets; `docs/` API and UI references.
   - Tests colocated as `*.test.ts(x)` or under `tests/`.
 
 ## Build, Test, and Development Commands
 - Init (if not set up): `pnpm create vite@latest . -- --template react-ts`.
-- Install UI: `pnpm add -D tailwindcss @tailwindcss/vite daisyui` (Tailwind v4 + daisyUI v5). No PostCSS config needed.
+- Install UI: `pnpm add -D tailwindcss @tailwindcss/vite` (Tailwind v4). No PostCSS config needed.
 - Dev: `pnpm dev` (Vite HMR).
 - Build/Preview: `pnpm build` → `dist/`, `pnpm preview`.
 - Test/Lint/Format: `pnpm test` (Vitest), `pnpm lint`, `pnpm format`.
@@ -24,7 +24,7 @@
 - TypeScript strict, 2-space indent, UTF-8, LF.
 - Components `PascalCase.tsx` in `src/components`; utilities `camelCase.ts` in `src/lib`.
 - Queries: define in `src/api/`; name keys like `['meters', id]`. Mutations in feature folders.
-- Tailwind + daisyUI: Tailwind v4 uses CSS-first config. In `src/styles/index.css` use `@import "tailwindcss";` and `@plugin "daisyui";`. Configure themes via data-theme (e.g., `<html data-theme="light">`).
+- Tailwind: Tailwind v4 uses CSS-first config. In `src/styles/index.css` use `@import "tailwindcss";`.
 - Vite env vars: prefix with `VITE_` and document in `.env.example`.
 
 ## Testing Guidelines
