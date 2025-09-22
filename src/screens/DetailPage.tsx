@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import PercentSlider from "../features/details/PercentSlider";
 import ReportMonth from "../features/details/ReportMonth";
 import WideDetailsTable from "../features/details/WideDetailsTable";
 import BranchSelect from "../features/branches/BranchSelect";
@@ -22,6 +21,9 @@ export default function DetailPage() {
     const n = s != null ? Number(s) : 3;
     return n === 6 || n === 12 ? n : 3;
   });
+  const [tableQuery, setTableQuery] = useState("");
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [submitted, setSubmitted] = useState<boolean>(false);
 
   useEffect(() => {
     try { localStorage.setItem('detail.threshold', String(threshold)); } catch {}
@@ -40,82 +42,119 @@ export default function DetailPage() {
     <div className="min-h-screen bg-base-200 text-base-content">
       <div className="navbar bg-base-100 shadow">
         <div className="flex-1 px-2 text-xl font-semibold">
-          ระบบแสดงผลผู้ใช้น้ำรายใหญ่ 200 ราย
+          ระบบแสดงผลผู้ใช้น้ำรายใหญ่
         </div>
         <div className="flex-none">
-          <Link to="/" className="btn btn-ghost">
-            Home
-          </Link>
+          <Link to="/" className="btn btn-ghost">Home</Link>
         </div>
       </div>
 
       <main className="container mx-auto p-6 grid gap-6">
-        <div className="grid gap-2">
-          <div className="text-sm">เดือนรายงาน</div>
-          <div className="flex flex-wrap md:flex-nowrap items-end gap-4">
-            <ReportMonth value={latestYm} onChange={setLatestYm} disabled={controlsDisabled} />
-            <label className={`form-control w-72 ${controlsDisabled ? '' : ''}`}>
-              <div className="label">
-                <span className="label-text">สาขา</span>
-              </div>
-              <BranchSelect value={branch} onChange={setBranch} />
-            </label>
+        <section className="card bg-base-100 shadow">
+          <div className="card-body gap-4">
+            <h2 className="card-title">ตัวกรองข้อมูล</h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end">
+              <label className="form-control">
+                <div className="label"><span className="label-text">เดือน/ปี</span></div>
+                <ReportMonth value={latestYm} onChange={setLatestYm} disabled={false} />
+              </label>
 
-            <div className={`grid gap-1 ${controlsDisabled ? 'opacity-50' : ''}`}>
-              <div className="w-64">
-                <PercentSlider value={threshold} onChange={setThreshold} disabled={controlsDisabled} />
-              </div>
-            </div>
+              <label className="form-control">
+                <div className="label"><span className="label-text">สาขา</span></div>
+                <BranchSelect value={branch} onChange={setBranch} />
+              </label>
 
-            <div className={`grid gap-1 ${controlsDisabled ? 'opacity-50' : ''}`}>
-              <div className="text-sm">ป้อนค่า % ผลต่างเอง (0 -100)</div>
-              <label className="input input-bordered flex items-center gap-2 w-40">
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  className="grow"
-                  value={threshold}
-                  disabled={controlsDisabled}
-                  onChange={(e) => {
-                    const v = Math.max(
-                      0,
-                      Math.min(100, Number(e.target.value || 0)),
-                    );
-                    setThreshold(v);
+              <label className="form-control">
+                <div className="label"><span className="label-text">เปอร์เซ็นต์ผลต่าง (น้อยกว่า)</span></div>
+                <label className="input input-bordered flex items-center gap-2 w-40">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="grow"
+                    value={threshold}
+                    onChange={(e) => {
+                      const v = Math.max(0, Math.min(100, Number(e.target.value || 0)));
+                      setThreshold(v);
+                    }}
+                  />
+                  <span className="opacity-70">%</span>
+                </label>
+              </label>
+
+              <div className="flex gap-2 justify-end md:col-span-2 lg:col-span-1">
+                <button
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setBranch("")
+                    setThreshold(10)
+                    setCompact(true)
+                    setCompactMonths(3)
+                    setTableQuery("")
+                    setPageSize(10)
+                    setSubmitted(false)
                   }}
+                >ล้างค่า</button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setSubmitted(true)}
+                  disabled={!branch}
+                >แสดงรายงาน</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="card bg-base-100 shadow">
+          <div className="card-body gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="input input-bordered flex items-center gap-2 w-full md:w-80">
+                <span className="opacity-70">🔎</span>
+                <input
+                  className="grow"
+                  placeholder="ค้นหาในตาราง..."
+                  value={tableQuery}
+                  onChange={(e) => setTableQuery(e.target.value)}
+                  disabled={!submitted || !branch}
                 />
-                <span className="opacity-70">%</span>
+              </label>
+              <button className="btn" disabled={!submitted || !branch} onClick={() => alert('Export CSV is coming soon')}>⭳ Export</button>
+              <div className="join">
+                <button className={`btn btn-outline join-item ${compact ? '' : 'btn-active'}`} onClick={() => setCompact(false)}>ขยาย</button>
+                <button className={`btn btn-outline join-item ${compact ? 'btn-active' : ''}`} onClick={() => setCompact(true)}>ย่อ</button>
+              </div>
+              <div className={`join ${compact ? '' : 'opacity-50 pointer-events-none'}`}>
+                <button className={`btn btn-outline join-item ${compactMonths === 3 ? 'btn-active' : ''}`} onClick={() => setCompactMonths(3)}>3 เดือน</button>
+                <button className={`btn btn-outline join-item ${compactMonths === 6 ? 'btn-active' : ''}`} onClick={() => setCompactMonths(6)}>6 เดือน</button>
+                <button className={`btn btn-outline join-item ${compactMonths === 12 ? 'btn-active' : ''}`} onClick={() => setCompactMonths(12)}>12 เดือน</button>
+              </div>
+
+              <label className="form-control ml-auto w-36">
+                <div className="label"><span className="label-text">แสดง:</span></div>
+                <select className="select select-bordered" value={pageSize} onChange={(e)=>setPageSize(Number(e.target.value))} disabled={!submitted || !branch}>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
               </label>
             </div>
 
-            <div className="form-control">
-              <label className="label cursor-pointer gap-3">
-                <span className="label-text">โหมดแสดงผล</span>
-                <input type="checkbox" className="toggle" checked={!compact} onChange={() => setCompact(!compact)} />
-                <span className="text-sm opacity-70">{compact ? 'แบบย่อ' : 'แบบเต็ม'}</span>
-              </label>
-            </div>
-
-            <label className={`form-control w-40 ${(!compact || controlsDisabled) ? 'opacity-50' : ''}`}>
-              <div className="label"><span className="label-text">จำนวนเดือน (มินิมอล)</span></div>
-              <select className="select select-bordered" value={compactMonths} onChange={(e)=>setCompactMonths(Number(e.target.value))} disabled={!compact || controlsDisabled}>
-                <option value={3}>3</option>
-                <option value={6}>6</option>
-                <option value={12}>12</option>
-              </select>
-            </label>
+            {submitted && branch ? (
+              <WideDetailsTable
+                branch={branch}
+                months={months}
+                threshold={threshold}
+                compact={compact}
+                compactMonths={compactMonths}
+                query={tableQuery}
+                pageSize={pageSize}
+              />
+            ) : (
+              <div className="alert">กรุณาเลือกสาขาและกด "แสดงรายงาน"</div>
+            )}
           </div>
-        </div>
-
-        {branch ? (
-          <WideDetailsTable branch={branch} months={months} threshold={threshold} compact={compact} compactMonths={compactMonths} />
-        ) : (
-          <div className="alert">
-            กรุณาเลือกสาขาเพื่อแสดงข้อมูล
-          </div>
-        )}
+        </section>
       </main>
     </div>
   );

@@ -1,11 +1,19 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { getDetails } from '../../api/details'
 import { getCustCodes } from '../../api/custcodes'
 
-type Props = { branch: string; months: string[]; threshold: number; compact?: boolean; compactMonths?: number }
+type Props = {
+  branch: string
+  months: string[]
+  threshold: number
+  compact?: boolean
+  compactMonths?: number
+  query?: string
+  pageSize?: number
+}
 
-export default function WideDetailsTable({ branch, months, threshold, compact = true, compactMonths = 3 }: Props) {
+export default function WideDetailsTable({ branch, months, threshold, compact = true, compactMonths = 3, query = '', pageSize = 10 }: Props) {
   const queries = useQueries({
     queries: months.map((ym) => ({
       queryKey: ['details', { branch, ym }],
@@ -38,6 +46,36 @@ export default function WideDetailsTable({ branch, months, threshold, compact = 
     return pct <= -threshold // decreasing usage by threshold
   })
 
+  const q = query.trim().toLowerCase()
+  const searched = q
+    ? filtered.filter((r) =>
+        [
+          r.org_name ?? '',
+          r.cust_code,
+          r.use_type ?? '',
+          r.use_name ?? '',
+          r.cust_name ?? '',
+          r.address ?? '',
+          r.route_code ?? '',
+          r.meter_no ?? '',
+          r.meter_size ?? '',
+          r.meter_brand ?? '',
+          r.meter_state ?? '',
+        ].some((v) => String(v).toLowerCase().includes(q))
+      )
+    : filtered
+
+  const [page, setPage] = useState(1)
+  const totalPages = Math.max(1, Math.ceil(searched.length / (pageSize || 10)))
+  const currentPage = Math.min(page, totalPages)
+  const start = (currentPage - 1) * (pageSize || 10)
+  const end = start + (pageSize || 10)
+  const pageRows = searched.slice(start, end)
+
+  useEffect(() => {
+    setPage(1)
+  }, [branch, latest, threshold, query, pageSize, compact, compactMonths])
+
   const displayMonths = useMemo(() => {
     const unique = Array.from(new Set(months))
     return compact ? unique.slice(0, compactMonths) : unique
@@ -49,16 +87,18 @@ export default function WideDetailsTable({ branch, months, threshold, compact = 
         <div className="flex items-center gap-3">
           {loading && <span className="loading loading-spinner loading-sm" />}
           {error && <div className="text-error text-sm">{error.message}</div>}
-          <div className="text-sm">ผลลัพธ์: {filtered.length} ราย ที่เข้าเงื่อนไข</div>
         </div>
-
-        <div className="text-xs opacity-70">
-          การแสดงสี: เน้นเฉพาะคอลัมน์ของเดือนล่าสุดเมื่อปริมาณการใช้น้ำลดลงเทียบกับเดือนก่อนหน้า
-          ไล่สีจากอ่อนไปเข้มตามเปอร์เซ็นต์ลดลง เช่น
-          <span className="px-2 mx-1 rounded" style={heat(-7)}>≈−5%</span>
-          →
-          <span className="px-2 mx-1 rounded" style={heat(-30)}>≈−30%</span>.
-          ถ้าเพิ่มขึ้น/เท่าเดิม หรือเดือนก่อนหน้าเป็น 0 จะไม่แสดงสี
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="text-lg font-semibold">ผลลัพธ์: <span className="text-primary">{searched.length} รายชื่อ</span> ที่เข้าเงื่อนไข</div>
+          <div className="flex items-center gap-2 text-sm opacity-80">
+            <span>คำอธิบายสี:</span>
+            <ColorDot color="#facc15" />
+            <span>≈ 5-15%</span>
+            <ColorDot color="#fb923c" />
+            <span>≈ 15-30%</span>
+            <ColorDot color="#ef4444" />
+            <span>&gt; 30%</span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -67,7 +107,7 @@ export default function WideDetailsTable({ branch, months, threshold, compact = 
               <tr>
                 <th>ลำดับ</th>
                 <th>กปภ.สาขา</th>
-                <th>เลขที่ผู้ใช้งาน</th>
+                <th>เลขที่ผู้ใช้น้ำ</th>
                 {!compact && <th>ประเภท</th>}
                 {!compact && <th>รายละเอียด</th>}
                 <th>ชื่อผู้ใช้น้ำ</th>
@@ -79,15 +119,16 @@ export default function WideDetailsTable({ branch, months, threshold, compact = 
                 {!compact && <th>สถานะมาตร</th>}
                 <th className="text-right">หน่วยน้ำเฉลี่ย</th>
                 {!compact && <th className="text-right">เลขมาตรที่อ่านได้</th>}
-                {displayMonths.map((ym) => (
+                <th className="text-right">หน่วยน้ำเดือนนี้ <span className="badge badge-info badge-sm align-middle">ล่าสุด</span></th>
+                {displayMonths.slice(1).map((ym) => (
                   <th key={ym} className="text-right">{fmtThMonth(ym)}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r, i) => (
+              {pageRows.map((r, i) => (
                 <tr key={r.key}>
-                  <td>{i + 1}</td>
+                  <td>{start + i + 1}</td>
                   <td className="font-mono">{r.org_name ?? r.branch}</td>
                   <td className="font-mono">{r.cust_code}</td>
                   {!compact && <td>{r.use_type ?? '-'}</td>}
@@ -101,35 +142,33 @@ export default function WideDetailsTable({ branch, months, threshold, compact = 
                   {!compact && <td>{r.meter_state ?? '-'}</td>}
                   <td className="text-right">{fmtNum(r.average ?? 0)}</td>
                   {!compact && <td className="text-right">{r.present_meter_count ?? 0}</td>}
-                  {displayMonths.map((ym) => {
-                    const val = r.values[ym] ?? 0
-                    if (ym !== latest) {
-                      return (
-                        <td key={ym} className="text-right">{fmtNum(val)}</td>
-                      )
-                    }
+                  {(() => {
                     const prev = r.values[previous] ?? 0
-                    const delta = val - prev
-                    const pct = prev ? (delta / prev) * 100 : NaN
-                    const title = Number.isFinite(pct)
-                      ? `ปัจจุบัน: ${fmtNum(val)}\nก่อนหน้า: ${fmtNum(prev)}\nΔ: ${fmtNum(delta)}\n%: ${fmtPct(pct)} (เทียบเดือนก่อนหน้า)`
-                      : `ปัจจุบัน: ${fmtNum(val)}\nก่อนหน้า: ${fmtNum(prev)}\nไม่สามารถคำนวณ % (เดือนก่อนหน้าเป็น 0)`
-                    const tip = Number.isFinite(pct)
-                      ? `%: ${fmtPct(pct)} | Δ: ${fmtNum(delta)} | ปัจจุบัน: ${fmtNum(val)} | ก่อนหน้า: ${fmtNum(prev)}`
-                      : `ปัจจุบัน: ${fmtNum(val)} | ก่อนหน้า: ${fmtNum(prev)} | % คำนวณไม่ได้`
+                    const curr = r.values[latest] ?? 0
+                    const pct = prev ? ((curr - prev) / prev) * 100 : 0
                     return (
-                      <td key={ym} className="text-right" style={heat(prevCurrPct(r, latest, previous))}>
-                        <div className="tooltip tooltip-left" data-tip={tip} title={title}>
-                          <span>{fmtNum(val)}</span>
-                        </div>
+                      <td className="text-right">
+                        <span className={`badge text-xs ${chipClass(pct)}`}>{fmtNum(curr)}{prev ? ` (${fmtPct(pct)})` : ''}</span>
                       </td>
+                    )
+                  })()}
+                  {displayMonths.slice(1).map((ym) => {
+                    const val = r.values[ym]
+                    // แสดงตัวเลขปกติ ไม่ลงสี (ต้องการให้เฉพาะเดือนล่าสุดเท่านั้นที่ลงสี)
+                    return (
+                      <td key={ym} className="text-right">{val != null ? fmtNum(val) : '-'}</td>
                     )
                   })}
                 </tr>
               ))}
+              {!loading && pageRows.length === 0 && (
+                <tr><td colSpan={8} className="opacity-70">No data</td></tr>
+              )}
             </tbody>
           </table>
         </div>
+
+        <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
       </div>
     </div>
   )
@@ -295,4 +334,46 @@ function fmtNum(n: number): string {
 function fmtPct(p: number): string {
   const s = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(p)
   return `${s}%`
+}
+
+function chipClass(pct: number): string {
+  // Use thresholds to match legend colors
+  if (pct >= 0) return 'badge-ghost'
+  const abs = Math.abs(pct)
+  if (abs > 30) return 'badge-error'
+  if (abs >= 15) return 'badge-warning'
+  if (abs >= 5) return 'badge-warning badge-outline'
+  return 'badge-ghost'
+}
+
+function ColorDot({ color }: { color: string }) {
+  return <span style={{ background: color }} className="inline-block w-2.5 h-2.5 rounded-full align-middle" />
+}
+
+function Pagination({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
+  const canPrev = page > 1
+  const canNext = page < totalPages
+  const pages = (() => {
+    const out: (number | string)[] = []
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || Math.abs(i - page) <= 1) out.push(i)
+      else if (out[out.length - 1] !== '…') out.push('…')
+    }
+    return out
+  })()
+  return (
+    <div className="flex items-center gap-2 justify-end pt-2">
+      <button className="btn btn-sm" disabled={!canPrev} onClick={() => canPrev && onChange(page - 1)}>« ก่อนหน้า</button>
+      <div className="join">
+        {pages.map((p, idx) => (
+          typeof p === 'number' ? (
+            <button key={idx} className={`btn btn-sm join-item ${p === page ? 'btn-primary' : 'btn-outline'}`} onClick={() => onChange(p)}>{p}</button>
+          ) : (
+            <button key={idx} className="btn btn-sm join-item btn-disabled">{p}</button>
+          )
+        ))}
+      </div>
+      <button className="btn btn-sm" disabled={!canNext} onClick={() => canNext && onChange(page + 1)}>ถัดไป »</button>
+    </div>
+  )
 }
