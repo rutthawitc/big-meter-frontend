@@ -38,7 +38,10 @@ export default function WideDetailsTable({ branch, months, threshold, compact = 
     return pct <= -threshold // decreasing usage by threshold
   })
 
-  const displayMonths = useMemo(() => Array.from(new Set(months)), [months])
+  const displayMonths = useMemo(() => {
+    const unique = Array.from(new Set(months))
+    return compact ? unique.slice(0, 3) : unique
+  }, [months, compact])
 
   return (
     <div className="card bg-base-100 shadow">
