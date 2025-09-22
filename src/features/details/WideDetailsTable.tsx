@@ -31,6 +31,7 @@ export default function WideDetailsTable({ branch, months, threshold, compact = 
   )
 
   const filtered = rows.filter((r) => {
+    if (threshold <= 0) return true // show all when threshold is 0
     const prev = r.values[previous] ?? 0
     const curr = r.values[latest] ?? 0
     const pct = prev === 0 ? 0 : ((curr - prev) / prev) * 100
@@ -153,6 +154,30 @@ function combine(months: string[], lists: Item[][], metaItems: MetaItem[]) {
   const map = new Map<string, Row>()
   const metaMap = new Map<string, MetaItem>()
   metaItems.forEach((m) => metaMap.set(m.cust_code, m))
+  // Seed rows from custcodes (top-200) so we always start with 200 entries
+  metaItems.forEach((m) => {
+    const key = m.cust_code
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        branch: '',
+        org_name: m.org_name ?? null,
+        cust_code: m.cust_code,
+        use_type: m.use_type ?? null,
+        use_name: m.use_name ?? null,
+        cust_name: m.cust_name ?? null,
+        address: m.address ?? null,
+        route_code: m.route_code ?? null,
+        meter_no: m.meter_no ?? null,
+        meter_size: m.meter_size ?? null,
+        meter_brand: m.meter_brand ?? null,
+        meter_state: m.meter_state ?? null,
+        average: null,
+        present_meter_count: null,
+        values: {},
+      })
+    }
+  })
   lists.forEach((items, idx) => {
     const ym = months[idx]
     items.forEach((it) => {
