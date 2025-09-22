@@ -17,6 +17,11 @@ export default function DetailPage() {
     const s = typeof localStorage !== 'undefined' ? localStorage.getItem('detail.compact') : null;
     return s == null ? true : s === 'true';
   });
+  const [compactMonths, setCompactMonths] = useState<number>(() => {
+    const s = typeof localStorage !== 'undefined' ? localStorage.getItem('detail.compactMonths') : null;
+    const n = s != null ? Number(s) : 3;
+    return n === 6 || n === 12 ? n : 3;
+  });
 
   useEffect(() => {
     try { localStorage.setItem('detail.threshold', String(threshold)); } catch {}
@@ -24,6 +29,9 @@ export default function DetailPage() {
   useEffect(() => {
     try { localStorage.setItem('detail.compact', String(compact)); } catch {}
   }, [compact]);
+  useEffect(() => {
+    try { localStorage.setItem('detail.compactMonths', String(compactMonths)); } catch {}
+  }, [compactMonths]);
 
   const months = useMemo(() => monthsBack(latestYm, 12), [latestYm]);
   const controlsDisabled = !branch;
@@ -89,11 +97,20 @@ export default function DetailPage() {
                 <span className="text-sm opacity-70">{compact ? 'แบบย่อ' : 'แบบเต็ม'}</span>
               </label>
             </div>
+
+            <label className={`form-control w-40 ${(!compact || controlsDisabled) ? 'opacity-50' : ''}`}>
+              <div className="label"><span className="label-text">จำนวนเดือน (มินิมอล)</span></div>
+              <select className="select select-bordered" value={compactMonths} onChange={(e)=>setCompactMonths(Number(e.target.value))} disabled={!compact || controlsDisabled}>
+                <option value={3}>3</option>
+                <option value={6}>6</option>
+                <option value={12}>12</option>
+              </select>
+            </label>
           </div>
         </div>
 
         {branch ? (
-          <WideDetailsTable branch={branch} months={months} threshold={threshold} compact={compact} />
+          <WideDetailsTable branch={branch} months={months} threshold={threshold} compact={compact} compactMonths={compactMonths} />
         ) : (
           <div className="alert">
             กรุณาเลือกสาขาเพื่อแสดงข้อมูล

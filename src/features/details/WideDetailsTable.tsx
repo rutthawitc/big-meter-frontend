@@ -3,9 +3,9 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { getDetails } from '../../api/details'
 import { getCustCodes } from '../../api/custcodes'
 
-type Props = { branch: string; months: string[]; threshold: number; compact?: boolean }
+type Props = { branch: string; months: string[]; threshold: number; compact?: boolean; compactMonths?: number }
 
-export default function WideDetailsTable({ branch, months, threshold, compact = true }: Props) {
+export default function WideDetailsTable({ branch, months, threshold, compact = true, compactMonths = 3 }: Props) {
   const queries = useQueries({
     queries: months.map((ym) => ({
       queryKey: ['details', { branch, ym }],
@@ -40,8 +40,8 @@ export default function WideDetailsTable({ branch, months, threshold, compact = 
 
   const displayMonths = useMemo(() => {
     const unique = Array.from(new Set(months))
-    return compact ? unique.slice(0, 3) : unique
-  }, [months, compact])
+    return compact ? unique.slice(0, compactMonths) : unique
+  }, [months, compact, compactMonths])
 
   return (
     <div className="card bg-base-100 shadow">
