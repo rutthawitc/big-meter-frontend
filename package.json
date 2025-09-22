@@ -1,0 +1,79 @@
+{
+  "name": "big-meter-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "lint": "echo 'add eslint config or use your preferred linter' && exit 0",
+    "format": "prettier -w . || true"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.55.0",
+    "react-router-dom": "^6.26.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/react": "^16.0.0",
+    "@types/node": "^20.14.12",
+    "@vitejs/plugin-react-swc": "^3.7.1",
+    "daisyui": "^5.1.13",
+    "jsdom": "^25.0.0",
+    "prettier": "^3.3.3",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.8",
+    "vitest": "^2.1.1"
+  },
+  "packageManager": "pnpm@10.17.0",
+  "pnpm": {
+    "allowedScripts": {
+      "esbuild": true,
+      "@esbuild/aix-ppc64": true,
+      "@esbuild/android-arm": true,
+      "@esbuild/android-arm64": true,
+      "@esbuild/android-x64": true,
+      "@esbuild/darwin-arm64": true,
+      "@esbuild/darwin-x64": true,
+      "@esbuild/freebsd-arm64": true,
+      "@esbuild/freebsd-x64": true,
+      "@esbuild/linux-arm": true,
+      "@esbuild/linux-arm64": true,
+      "@esbuild/linux-ia32": true,
+      "@esbuild/linux-loong64": true,
+      "@esbuild/linux-mips64el": true,
+      "@esbuild/linux-ppc64": true,
+      "@esbuild/linux-riscv64": true,
+      "@esbuild/linux-s390x": true,
+      "@esbuild/linux-x64": true,
+      "@esbuild/netbsd-x64": true,
+      "@esbuild/openbsd-x64": true,
+      "@esbuild/sunos-x64": true,
+      "@esbuild/win32-arm64": true,
+      "@esbuild/win32-ia32": true,
+      "@esbuild/win32-x64": true,
+      "@swc/core": true,
+      "@swc/core-darwin-arm64": true,
+      "@swc/core-darwin-x64": true,
+      "@swc/core-linux-arm-gnueabihf": true,
+      "@swc/core-linux-arm64-gnu": true,
+      "@swc/core-linux-arm64-musl": true,
+      "@swc/core-linux-x64-gnu": true,
+      "@swc/core-linux-x64-musl": true,
+      "@swc/core-win32-arm64-msvc": true,
+      "@swc/core-win32-ia32-msvc": true,
+      "@swc/core-win32-x64-msvc": true
+    },
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "@tailwindcss/oxide",
+      "esbuild"
+    ]
+  }
+}
