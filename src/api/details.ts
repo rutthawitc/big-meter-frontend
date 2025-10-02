@@ -29,8 +29,7 @@ export function getDetails(params: {
   limit?: number
   offset?: number
   order_by?: string
-  sort?: 'asc' | 'desc'
+  sort?: 'ASC' | 'DESC' | 'asc' | 'desc'
 }) {
   return fetchJson<DetailsResponse>(buildUrl('/api/v1/details', params as any))
 }
-
