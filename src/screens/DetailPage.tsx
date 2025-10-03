@@ -7,6 +7,7 @@ import { getCustCodes } from "../api/custcodes";
 import type { CustCodeItem } from "../api/custcodes";
 import { getDetails } from "../api/details";
 import type { DetailItem } from "../api/details";
+import { exportDetailsToXlsx } from "../lib/exportDetailsXlsx";
 import { useMediaQuery } from "../lib/useMediaQuery";
 
 type AppliedFilters = {
@@ -90,6 +91,7 @@ export default function DetailPage() {
     () => (applied ? buildMonths(applied.ym, MAX_HISTORY_MONTHS) : []),
     [applied],
   );
+  const exportMonthLabels = useMemo(() => monthsAll.map((ym) => fmtThMonth(ym)), [monthsAll]);
 
   const detailQueries = useQueries({
     queries: monthsAll.map((ym) => ({
@@ -172,6 +174,24 @@ export default function DetailPage() {
     setPage(1);
     setPageSize(10);
     setApplied(null);
+  }
+
+  function handleExport() {
+    if (!applied) return;
+    if (!filteredRows.length) return;
+    if (!monthsAll.length) return;
+
+    const branchPart = applied.branch
+      ? sanitizeFileNamePart(applied.branch)
+      : "all";
+    const fileName = `big-meter-${branchPart}-${applied.ym}.xlsx`;
+
+    exportDetailsToXlsx({
+      rows: filteredRows,
+      months: monthsAll,
+      monthLabels: exportMonthLabels,
+      fileName,
+    });
   }
 
   return (
@@ -337,8 +357,9 @@ export default function DetailPage() {
 
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                onClick={() => alert("Export coming soon")}
+                className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={handleExport}
+                disabled={!applied || filteredRows.length === 0}
               >
                 Export
               </button>
@@ -678,6 +699,12 @@ function TrendSparkline({
       </div>
     </div>
   );
+}
+
+function sanitizeFileNamePart(part: string) {
+  const normalized = part.trim();
+  if (!normalized) return "all";
+  return normalized.replace(/[^0-9A-Za-zก-๛_-]+/g, "-");
 }
 
 function MonthHeader({ ym }: { ym: string }) {
