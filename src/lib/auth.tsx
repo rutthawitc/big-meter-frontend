@@ -52,7 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(parsed);
       }
     } catch (error) {
-      console.error("Failed to parse auth user", error);
+      // Only log in development
+      if (import.meta.env.DEV) {
+        console.error("Failed to parse auth user", error);
+      }
       window.localStorage.removeItem(STORAGE_KEY);
     } finally {
       setHydrated(true);

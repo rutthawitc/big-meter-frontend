@@ -31,5 +31,5 @@ export function getDetails(params: {
   order_by?: string
   sort?: 'ASC' | 'DESC' | 'asc' | 'desc'
 }) {
-  return fetchJson<DetailsResponse>(buildUrl('/api/v1/details', params as any))
+  return fetchJson<DetailsResponse>(buildUrl('/api/v1/details', params as Record<string, string | number | boolean | undefined>))
 }

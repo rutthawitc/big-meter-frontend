@@ -51,7 +51,10 @@ export default function LoginPage() {
       login(data);
       navigate("/details", { replace: true });
     } catch (fetchError) {
-      console.error("Login failed", fetchError);
+      // Only log in development
+      if (import.meta.env.DEV) {
+        console.error("Login failed", fetchError);
+      }
       setError(
         fetchError instanceof Error
           ? fetchError.message

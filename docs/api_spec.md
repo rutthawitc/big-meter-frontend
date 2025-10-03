@@ -16,26 +16,26 @@ API Spec: BigMeter Sync (REST v1)
 - Endpoints ที่ใช้งานได้: `GET /healthz`, `GET /version`, `GET /branches`, `GET /custcodes`, `GET /details`, `GET /details/summary`, `GET /custcodes/{cust_code}/details`, `POST /sync/init`, `POST /sync/monthly`, `GET /config`
 - หมายเหตุ: `/sync/*` และ `/config` เป็น "stub" สำหรับการพัฒนา Frontend (ตอบกลับโครงสร้างข้อมูล แต่ไม่ได้รันงานจริง)
 
-1) Health & Version
+1. Health & Version
 
 - GET `/healthz`
   - 200 OK
   - ตัวอย่างตอบกลับ:
     {
-      "status": "ok",
-      "time": "2025-10-01T08:00:00Z"
+    "status": "ok",
+    "time": "2025-10-01T08:00:00Z"
     }
 
 - GET `/version`
   - 200 OK
   - ตัวอย่างตอบกลับ:
     {
-      "service": "bigmeter-sync-api",
-      "version": "1.0.0",
-      "commit": "<gitsha>"
+    "service": "bigmeter-sync-api",
+    "version": "1.0.0",
+    "commit": "<gitsha>"
     }
 
-2) Branches
+2. Branches
 
 - GET `/branches`
   - อธิบาย: รายการสาขาที่ระบบรู้จัก (จากคอนฟิก/CSV)
@@ -43,13 +43,13 @@ API Spec: BigMeter Sync (REST v1)
   - 200 OK
   - ตัวอย่างตอบกลับ:
     {
-      "items": [ {"code": "BA01"}, {"code": "BA02"} ],
-      "total": 2,
-      "limit": 50,
-      "offset": 0
+    "items": [ {"code": "BA01"}, {"code": "BA02"} ],
+    "total": 2,
+    "limit": 50,
+    "offset": 0
     }
 
-3) Yearly Snapshot (Top-200)
+3. Yearly Snapshot (Top-200)
 
 - GET `/custcodes`
   - อธิบาย: ดึงรายชื่อ cust_code 200 ราย (ต่อสาขา) สำหรับปีงบประมาณที่กำหนด
@@ -61,31 +61,31 @@ API Spec: BigMeter Sync (REST v1)
   - 200 OK
   - ตัวอย่างตอบกลับ:
     {
-      "items": [
-        {
-          "fiscal_year": 2025,
-          "branch_code": "BA01",
-          "org_name": "BA01",
-          "cust_code": "C12345",
-          "use_type": "R",
-          "use_name": "Residential",
-          "cust_name": "John Doe",
-          "address": "...",
-          "route_code": "RT01",
-          "meter_no": "M-0001",
-          "meter_size": "1/2",
-          "meter_brand": "XYZ",
-          "meter_state": "N",
-          "debt_ym": "202410",
-          "created_at": "2024-10-15T22:05:02Z"
-        }
-      ],
-      "total": 200,
-      "limit": 50,
-      "offset": 0
+    "items": [
+    {
+    "fiscal_year": 2025,
+    "branch_code": "BA01",
+    "org_name": "BA01",
+    "cust_code": "C12345",
+    "use_type": "R",
+    "use_name": "Residential",
+    "cust_name": "John Doe",
+    "address": "...",
+    "route_code": "RT01",
+    "meter_no": "M-0001",
+    "meter_size": "1/2",
+    "meter_brand": "XYZ",
+    "meter_state": "N",
+    "debt_ym": "202410",
+    "created_at": "2024-10-15T22:05:02Z"
+    }
+    ],
+    "total": 200,
+    "limit": 50,
+    "offset": 0
     }
 
-4) Monthly Details (รายเดือน)
+4. Monthly Details (รายเดือน)
 
 - GET `/details`
   - อธิบาย: ดึงข้อมูลรายเดือนจาก `bm_meter_details`
@@ -94,55 +94,55 @@ API Spec: BigMeter Sync (REST v1)
   - หมายเหตุ: แถวที่เกิดจาก “ไม่มีข้อมูลจริง” จะมีค่าเลขเป็น 0 และฟิลด์ข้อความจำนวนมากอาจไม่มีค่า (ละเว้นจาก JSON) — ควรตีความว่าเป็น “zeroed row”
   - ตัวอย่างตอบกลับ:
     {
-      "items": [
-        {
-          "fiscal_year": 2026,
-          "year_month": "202410",
-          "branch_code": "BA01",
-          "org_name": "BA01",
-          "cust_code": "C12345",
-          "use_type": "R",
-          "use_name": "Residential",
-          "cust_name": "John Doe",
-          "address": "...",
-          "route_code": "RT01",
-          "meter_no": "M-0001",
-          "meter_size": "1/2",
-          "meter_brand": "XYZ",
-          "meter_state": "N",
-          "average": 12.5,
-          "present_meter_count": 300,
-          "present_water_usg": 15.0,
-          "debt_ym": "202410",
-          "created_at": "2024-10-16T08:05:02Z",
-          "is_zeroed": false
-        },
-        {
-          "fiscal_year": 2026,
-          "year_month": "202410",
-      "branch_code": "BA01",
-      "org_name": null,
-      "cust_code": "C99999",
-      "use_type": "R",
-      "use_name": null,
-          "cust_name": null,
-          "address": null,
-          "route_code": null,
-          "meter_no": "M-0999",
-          "meter_size": null,
-          "meter_brand": null,
-          "meter_state": "N",
-          "average": 0,
-          "present_meter_count": 0,
-          "present_water_usg": 0,
-          "debt_ym": "202410",
-          "created_at": "2024-10-16T08:05:02Z",
-      "is_zeroed": true
+    "items": [
+    {
+    "fiscal_year": 2026,
+    "year_month": "202410",
+    "branch_code": "BA01",
+    "org_name": "BA01",
+    "cust_code": "C12345",
+    "use_type": "R",
+    "use_name": "Residential",
+    "cust_name": "John Doe",
+    "address": "...",
+    "route_code": "RT01",
+    "meter_no": "M-0001",
+    "meter_size": "1/2",
+    "meter_brand": "XYZ",
+    "meter_state": "N",
+    "average": 12.5,
+    "present_meter_count": 300,
+    "present_water_usg": 15.0,
+    "debt_ym": "202410",
+    "created_at": "2024-10-16T08:05:02Z",
+    "is_zeroed": false
+    },
+    {
+    "fiscal_year": 2026,
+    "year_month": "202410",
+    "branch_code": "BA01",
+    "org_name": null,
+    "cust_code": "C99999",
+    "use_type": "R",
+    "use_name": null,
+    "cust_name": null,
+    "address": null,
+    "route_code": null,
+    "meter_no": "M-0999",
+    "meter_size": null,
+    "meter_brand": null,
+    "meter_state": "N",
+    "average": 0,
+    "present_meter_count": 0,
+    "present_water_usg": 0,
+    "debt_ym": "202410",
+    "created_at": "2024-10-16T08:05:02Z",
+    "is_zeroed": true
     }
-  ],
-  "total": 200,
-  "limit": 50,
-      "offset": 0
+    ],
+    "total": 200,
+    "limit": 50,
+    "offset": 0
     }
   - หมายเหตุ: หากมีหลายปีงบประมาณในเดือนเดียวกัน ระบบจะเลือกปีงบล่าสุดโดยอัตโนมัติ เว้นแต่ส่ง `fiscal_year`
 
@@ -152,14 +152,14 @@ API Spec: BigMeter Sync (REST v1)
   - 200 OK
   - ตัวอย่างตอบกลับ:
     {
-      "cust_code": "C12345",
-      "branch_code": "BA01",
-      "from": "202410",
-      "to": "202503",
-      "series": [
-        {"ym": "202410", "fiscal_year": 2026, "present_water_usg": 15.0, "is_zeroed": false},
-        {"ym": "202411", "fiscal_year": 2026, "present_water_usg": 0.0,  "is_zeroed": true}
-      ]
+    "cust_code": "C12345",
+    "branch_code": "BA01",
+    "from": "202410",
+    "to": "202503",
+    "series": [
+    {"ym": "202410", "fiscal_year": 2026, "present_water_usg": 15.0, "is_zeroed": false},
+    {"ym": "202411", "fiscal_year": 2026, "present_water_usg": 0.0, "is_zeroed": true}
+    ]
     }
 
 - GET `/details/summary`
@@ -169,16 +169,16 @@ API Spec: BigMeter Sync (REST v1)
   - 200 OK
   - ตัวอย่างตอบกลับ:
     {
-      "ym": "202410",
-      "branch": "BA01",
-      "fiscal_year": 2026,
-      "total": 200,
-      "zeroed": 15,
-      "active": 185,
-      "sum_present_water_usg": 12345.67
+    "ym": "202410",
+    "branch": "BA01",
+    "fiscal_year": 2026,
+    "total": 200,
+    "zeroed": 15,
+    "active": 185,
+    "sum_present_water_usg": 12345.67
     }
 
-5) Sync Triggers (Admin)
+5. Sync Triggers (Admin)
 
 - สถานะ: Stub (ตอบกลับตัวอย่าง/ไม่รันงานจริง) — ใช้เพื่อเชื่อมต่อ Frontend ระหว่างพัฒนา
 
@@ -186,46 +186,46 @@ API Spec: BigMeter Sync (REST v1)
   - อธิบาย: สั่งรัน Yearly Init แบบครั้งเดียว (upsert ชุด 200 ต่อสาขา)
   - Request body:
     {
-      "branches": ["BA01", "BA02"],
-      "debt_ym": "202410"  // ทางเลือก (ดีฟอลต์ ต.ค. ของปีปัจจุบัน)
+    "branches": ["BA01", "BA02"],
+    "debt_ym": "202410" // ทางเลือก (ดีฟอลต์ ต.ค. ของปีปัจจุบัน)
     }
   - 202 Accepted | 200 OK (ถ้าเลือก synchronous)
   - ตัวอย่างตอบกลับ (sync):
     {
-      "fiscal_year": 2025,
-      "branches": ["BA01"],
-      "debt_ym": "202410",
-      "stats": {"upserted": 200},
-      "started_at": "2024-10-15T22:00:01Z",
-      "finished_at": "2024-10-15T22:05:20Z"
+    "fiscal_year": 2025,
+    "branches": ["BA01"],
+    "debt_ym": "202410",
+    "stats": {"upserted": 200},
+    "started_at": "2024-10-15T22:00:01Z",
+    "finished_at": "2024-10-15T22:05:20Z"
     }
   - ตัวอย่าง curl (วางแผน):
     curl -X POST -H "Content-Type: application/json" \
-      -d '{"branches":["BA01"],"debt_ym":"202410"}' \
-      http://localhost:8080/api/v1/sync/init
+     -d '{"branches":["BA01"],"debt_ym":"202410"}' \
+     http://localhost:8089/api/v1/sync/init
 
 - POST `/sync/monthly`
   - อธิบาย: สั่งรัน Monthly Details แบบครั้งเดียว
   - Request body:
     {
-      "branches": ["BA01", "BA02"],
-      "ym": "202410"
+    "branches": ["BA01", "BA02"],
+    "ym": "202410"
     }
   - 202 Accepted | 200 OK (ถ้าเลือก synchronous)
   - ตัวอย่างตอบกลับ (sync):
     {
-      "ym": "202410",
-      "branches": ["BA01"],
-      "stats": {"upserted": 200, "zeroed": 15},
-      "started_at": "2024-10-16T08:00:01Z",
-      "finished_at": "2024-10-16T08:08:40Z"
+    "ym": "202410",
+    "branches": ["BA01"],
+    "stats": {"upserted": 200, "zeroed": 15},
+    "started_at": "2024-10-16T08:00:01Z",
+    "finished_at": "2024-10-16T08:08:40Z"
     }
   - ตัวอย่าง curl (วางแผน):
     curl -X POST -H "Content-Type: application/json" \
-      -d '{"branches":["BA01"],"ym":"202410"}' \
-      http://localhost:8080/api/v1/sync/monthly
+     -d '{"branches":["BA01"],"ym":"202410"}' \
+     http://localhost:8089/api/v1/sync/monthly
 
-6) Config Introspection
+6. Config Introspection
 
 - สถานะ: Stub (ตอบกลับค่าคอนฟิกหลักจากโปรเซส)
 
@@ -234,31 +234,31 @@ API Spec: BigMeter Sync (REST v1)
   - 200 OK
   - ตัวอย่างตอบกลับ:
     {
-      "timezone": "Asia/Bangkok",
-      "cron_yearly": "0 0 22 15 10 *",
-      "cron_monthly": "0 0 8 16 * *",
-      "branches_count": 34
+    "timezone": "Asia/Bangkok",
+    "cron_yearly": "0 0 22 15 10 _",
+    "cron_monthly": "0 0 8 16 _ \*",
+    "branches_count": 34
     }
   - ตัวอย่าง curl (วางแผน):
-    curl -s http://localhost:8080/api/v1/config
+    curl -s http://localhost:8089/api/v1/config
 
 การจัดการ Error (ตัวอย่าง)
 
 - 400 Bad Request: พารามิเตอร์ไม่ถูกต้อง
   {
-    "error": "invalid ym format, expect YYYYMM"
+  "error": "invalid ym format, expect YYYYMM"
   }
 - 401 Unauthorized / 403 Forbidden: ไม่มีสิทธิ์เข้าถึง
   {
-    "error": "unauthorized"
+  "error": "unauthorized"
   }
 - 404 Not Found: ไม่พบทรัพยากร
   {
-    "error": "cust_code not found"
+  "error": "cust_code not found"
   }
 - 500 Internal Server Error: เกิดข้อผิดพลาดภายในระบบ
   {
-    "error": "internal error"
+  "error": "internal error"
   }
 
 หมายเหตุการออกแบบ

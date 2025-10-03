@@ -8,9 +8,9 @@ Overview
 
 Quick Start
 
-1) Copy `.env.example` to `.env` (root) and fill DSNs + branch list. For Docker Compose, you can also copy `configs/.env.example` to `configs/.env`.
-2) Apply migrations in Postgres using your preferred tool with `migrations/0001_init.sql`.
-3) Run sync scheduler:
+1. Copy `.env.example` to `.env` (root) and fill DSNs + branch list. For Docker Compose, you can also copy `configs/.env.example` to `configs/.env`.
+2. Apply migrations in Postgres using your preferred tool with `migrations/0001_init.sql`.
+3. Run sync scheduler:
    - `go run cmd/sync/main.go` (scheduler)
    - `MODE=init-once YM=202410 go run cmd/sync/main.go` (one-time yearly init; YM is Gregorian)
    - `MODE=month-once YM=202410 go run cmd/sync/main.go` (one-time monthly)
@@ -28,6 +28,7 @@ API Server (Gin)
   - `GET /api/v1/details?branch=BA01&ym=202410`
 
 Search/Sort
+
 - Custcodes: query `q` searches across `cust_code, meter_no, use_type, org_name, use_name, cust_name, address, route_code, meter_size, meter_brand, meter_state, debt_ym`.
 - Details: query `q` searches across `cust_code, meter_no, cust_name, address, route_code, org_name, use_type, use_name`.
 - `order_by` allowlist (custcodes): `cust_code, meter_no, use_type, created_at, org_name, use_name, cust_name, address, route_code, meter_size, meter_brand, meter_state, debt_ym`.
@@ -39,9 +40,10 @@ Notes
 - Adjust SQL filters to limit details by custcodes per branch if you want to restrict to the 200-list captured on init. The skeleton executes as provided and can be extended to add `IN (:cust1, :cust2, ...)` binding or temporary tables.
 - If `BRANCHES` is unset, the app auto-loads branch list from `docs/r6_branches.csv` (first column `ba_code`).
 - All times and cron schedules honor `TIMEZONE`.
- - Do not commit secrets or real DSNs. Use `.env.example` (root) and `configs/.env.example` as templates; `.env` and `configs/.env` are git-ignored.
+- Do not commit secrets or real DSNs. Use `.env.example` (root) and `configs/.env.example` as templates; `.env` and `configs/.env` are git-ignored.
 
 Schema changes (2025-09)
+
 - Migration `0004_extend_custcode_init.sql` adds richer snapshot fields to `bm_custcode_init`.
 - `/custcodes` now returns these fields (nullable and omitted when null): `org_name, use_name, cust_name, address, route_code, meter_size, meter_brand`.
 - `/details` omits nullable fields when not present.
@@ -50,8 +52,8 @@ Docker (Postgres + API + Sync)
 
 - Requirements: Docker 24+, Docker Compose V2
 - Prepare env for Compose (no secrets; examples below):
-  1) Copy `configs/.env.example` to `configs/.env` and adjust values as needed.
-  2) Optionally create a root `.env` file from `.env.example` (or export envs) for Compose variables:
+  1. Copy `configs/.env.example` to `configs/.env` and adjust values as needed.
+  2. Optionally create a root `.env` file from `.env.example` (or export envs) for Compose variables:
      - `POSTGRES_USER=postgres`
      - `POSTGRES_PASSWORD=postgres`
      - `POSTGRES_DB=bigmeter`
@@ -60,7 +62,7 @@ Docker (Postgres + API + Sync)
   - Base stack: `docker compose up -d --build`
   - If you set `ORACLE_DSN` in `.env`, the Sync service will start and run the scheduler by default.
   - Run setup (first time only): `docker compose --profile setup up -d migrate seed_branches`
-  - API available at `http://localhost:8080/api/v1/healthz`
+  - API available at `http://localhost:8089/api/v1/healthz`
 - What runs:
   - `postgres` (17.6) with persistent volume `pgdata`
   - `migrate` (profile `setup`) applies all SQL in `migrations/`
@@ -69,12 +71,14 @@ Docker (Postgres + API + Sync)
   - `sync` built from `docker/Dockerfile.sync-thick` using godror (Oracle Instant Client, thick). Runs one-shots via `MODE`.
 
 Notes:
+
 - The sync container uses Oracle Instant Client (thick) — place an Instant Client ZIP in `orc_client/` (see `docker/Dockerfile.sync-thick`).
 - Provide a Service Name/SID DSN as shown in `docs/dev.md` (EZCONNECT recommended).
 - The sync service is part of the base stack; leave `ORACLE_DSN` empty to skip it, or provide the DSN to enable it.
 - You can still run sync locally with `make sync-init`.
 
 Troubleshooting (Oracle)
+
 - If SCAN endpoints close connections (ORA-12537) or heavy queries time out, use a node VIP or a DESCRIPTION DSN with `SERVER=DEDICATED`. See `docs/issues-2025-09-19.md` for findings and mitigations.
 
 Branch list in DB

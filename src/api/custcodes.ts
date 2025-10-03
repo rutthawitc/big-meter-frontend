@@ -21,6 +21,6 @@ export interface CustCodeItem {
 export interface CustCodesResponse { items: CustCodeItem[]; total?: number; limit?: number; offset?: number }
 
 export function getCustCodes(params: { branch: string; ym?: string; fiscal_year?: number; q?: string; limit?: number; offset?: number }) {
-  return fetchJson<CustCodesResponse>(buildUrl('/api/v1/custcodes', params as any))
+  return fetchJson<CustCodesResponse>(buildUrl('/api/v1/custcodes', params as Record<string, string | number | boolean | undefined>))
 }
 
