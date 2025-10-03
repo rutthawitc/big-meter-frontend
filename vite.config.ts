@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
   const loginEndpoint =
     env.VITE_LOGIN_API ||
     "https://intranet.pwa.co.th/login/webservice_login6.php";
+  const base = env.VITE_BASE_PATH?.trim() || "/";
 
   let loginUrl: URL | null = null;
   try {
@@ -23,6 +24,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    base,
     plugins: [react(), tailwind()],
     server: {
       port: 5173,
