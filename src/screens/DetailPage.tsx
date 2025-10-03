@@ -399,6 +399,7 @@ export default function DetailPage() {
                     months={monthsToDisplay}
                     latestYm={applied.ym}
                     baseIndex={(page - 1) * pageSize}
+                    isMobile={isMobile}
                   />
                   {filteredRows.length === 0 && (
                     <div className="mt-4 rounded-md border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">
@@ -433,11 +434,13 @@ function DataTable({
   months,
   latestYm,
   baseIndex,
+  isMobile,
 }: {
   rows: Row[];
   months: string[];
   latestYm: string;
   baseIndex: number;
+  isMobile: boolean;
 }) {
   if (!rows.length) return null;
   const prevYm = months[1];
@@ -511,7 +514,8 @@ function DataTable({
                           value={value}
                           pct={pct}
                           history={historyData}
-                         />
+                          isMobile={isMobile}
+                        />
                       </td>
                     );
                   }
@@ -534,10 +538,12 @@ function LatestUsageCell({
   value,
   pct,
   history,
+  isMobile,
 }: {
   value: number;
   pct: number | null;
   history: TrendPoint[];
+  isMobile: boolean;
 }) {
   const [isHover, setIsHover] = useState(false);
   const pctText =
@@ -545,6 +551,9 @@ function LatestUsageCell({
   const badgeClass = resolveBadgeClass(pct);
   const showSparkline = isHover && history.length > 1;
   const latestLabel = fmtThMonthParts(history[0].ym);
+  const { width, height } = isMobile
+    ? { width: 160, height: 60 }
+    : { width: 260, height: 90 };
 
   return (
     <div
@@ -567,21 +576,31 @@ function LatestUsageCell({
         {pctText}
       </span>
       {showSparkline && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-lg border border-slate-200 bg-white p-3 text-[10px] text-slate-500 shadow-lg">
-          <TrendSparkline data={history} />
+        <div
+          className="absolute right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border border-slate-200 bg-white p-3 text-[10px] text-slate-500 shadow-lg"
+          style={{ width: `${width}px` }}
+        >
+          <TrendSparkline data={history} width={width} height={height} />
         </div>
       )}
     </div>
   );
 }
 
-function TrendSparkline({ data }: { data: TrendPoint[] }) {
+function TrendSparkline({
+  data,
+  width,
+  height,
+}: {
+  data: TrendPoint[];
+  width: number;
+  height: number;
+}) {
   const ordered = useMemo(() => [...data].reverse(), [data]);
   if (!ordered.length) return null;
   const gradientId = useId();
-  const width = 160;
-  const height = 60;
-  const padding = 8;
+  const paddingY = 12;
+  const paddingX = Math.max(width * 0.06, 10);
 
   const values = ordered.map((point) => point.value);
   const min = Math.min(...values);
@@ -594,30 +613,32 @@ function TrendSparkline({ data }: { data: TrendPoint[] }) {
     () =>
       scaleLinear({
         domain: [0, xDomainMax],
-        range: [0, width],
+        range: [paddingX, width - paddingX],
       }),
-    [xDomainMax, width],
+    [xDomainMax, paddingX, width],
   );
   const yScale = useMemo(
     () =>
       scaleLinear({
         domain: [domainMin, domainMax],
-        range: [height - padding, padding],
+        range: [height - paddingY, paddingY],
       }),
-    [domainMin, domainMax, height, padding],
+    [domainMin, domainMax, height, paddingY],
   );
 
   const oldest = ordered[0];
   const latest = ordered[ordered.length - 1];
+  const oldestLabel = fmtThMonthParts(oldest.ym);
+  const latestLabel = fmtThMonthParts(latest.ym);
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between text-[10px] uppercase tracking-wide text-slate-400">
         <span>
-          {fmtThMonthParts(oldest.ym).label} {fmtThMonthParts(oldest.ym).year}
+          {oldestLabel.label} {oldestLabel.year}
         </span>
         <span>
-          {fmtThMonthParts(latest.ym).label} {fmtThMonthParts(latest.ym).year}
+          {latestLabel.label} {latestLabel.year}
         </span>
       </div>
       <svg width={width} height={height} role="presentation">
