@@ -88,10 +88,12 @@ Purpose: Practical reference for building UI against the BigMeter API.
   - `limit` (1..500; default 50), `offset` (>=0)
   - `order_by` allowlist: `cust_code, present_water_usg, present_meter_count, average, created_at, org_name, use_type, use_name, cust_name, address, route_code, meter_no, meter_size, meter_brand, meter_state, debt_ym`
   - `sort`: `ASC|DESC`
+  - `fiscal_year`: override the cohort version for the month. If omitted, the API returns the latest available fiscal snapshot for that `ym`/`branch`.
 - 200 OK (example; nullable fields omitted):
   {
     "items": [
       {
+        "fiscal_year": 2026,
         "year_month": "202410",
         "branch_code": "BA01",
         "org_name": "BA01",
@@ -113,6 +115,7 @@ Purpose: Practical reference for building UI against the BigMeter API.
         "is_zeroed": false
       },
       {
+        "fiscal_year": 2026,
         "year_month": "202410",
         "branch_code": "BA01",
         "cust_code": "C99999",
@@ -132,6 +135,7 @@ Purpose: Practical reference for building UI against the BigMeter API.
   }
 - Notes:
   - "Zeroed" rows indicate a cohort cust_code had no Oracle data for the month; numeric fields are 0 and many text fields are null/omitted. The boolean `is_zeroed` is computed by the API.
+  - When multiple fiscal snapshots exist for the same `ym`, the API defaults to the most recent snapshot unless `fiscal_year` is supplied explicitly.
 
 ### Monthly Details Summary
 - GET `/details/summary`
@@ -140,6 +144,7 @@ Purpose: Practical reference for building UI against the BigMeter API.
   {
     "ym": "202410",
     "branch": "BA01",
+    "fiscal_year": 2026,
     "total": 200,
     "zeroed": 15,
     "active": 185,
@@ -149,6 +154,7 @@ Purpose: Practical reference for building UI against the BigMeter API.
 ### Series by Custcode
 - GET `/custcodes/{cust_code}/details`
 - Required (query): `branch=BAxx`, `from=YYYYMM`, `to=YYYYMM`
+- Optional: `fiscal_year` (use a specific cohort; default is max fiscal per month)
 - 200 OK:
   {
     "cust_code": "C12345",
@@ -156,8 +162,8 @@ Purpose: Practical reference for building UI against the BigMeter API.
     "from": "202410",
     "to": "202503",
     "series": [
-      {"ym": "202410", "present_water_usg": 15.0, "present_meter_count": 300, "is_zeroed": false},
-      {"ym": "202411", "present_water_usg": 0.0,  "present_meter_count": 0,   "is_zeroed": true}
+      {"ym": "202410", "fiscal_year": 2026, "present_water_usg": 15.0, "present_meter_count": 300, "is_zeroed": false},
+      {"ym": "202411", "fiscal_year": 2026, "present_water_usg": 0.0,  "present_meter_count": 0,   "is_zeroed": true}
     ]
   }
 

@@ -12,9 +12,10 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.55.0",
-    "react-router-dom": "^6.26.2",
+    "@visx/visx": "^3.12.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^6.26.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.0",

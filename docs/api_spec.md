@@ -89,13 +89,14 @@ API Spec: BigMeter Sync (REST v1)
 
 - GET `/details`
   - อธิบาย: ดึงข้อมูลรายเดือนจาก `bm_meter_details`
-  - คิวรี: `ym` (จำเป็น), `branch` (จำเป็น), `cust_code` (รายการ/ซ้ำได้), `q` (ค้นหาข้อความ across: `cust_code, meter_no, cust_name, address, route_code, org_name, use_type, use_name`), `limit`, `offset`, `order_by` (allowlist: `cust_code, present_water_usg, present_meter_count, average, created_at, org_name, use_type, use_name, cust_name, address, route_code, meter_no, meter_size, meter_brand, meter_state, debt_ym`), `sort`
+  - คิวรี: `ym` (จำเป็น), `branch` (จำเป็น), `cust_code` (รายการ/ซ้ำได้), `q` (ค้นหาข้อความ across: `cust_code, meter_no, cust_name, address, route_code, org_name, use_type, use_name`), `limit`, `offset`, `order_by` (allowlist: `cust_code, present_water_usg, present_meter_count, average, created_at, org_name, use_type, use_name, cust_name, address, route_code, meter_no, meter_size, meter_brand, meter_state, debt_ym`), `sort`, `fiscal_year` (เลือก cohort เฉพาะ; ถ้าไม่ระบุระบบจะใช้ปีงบล่าสุด)
   - 200 OK
   - หมายเหตุ: แถวที่เกิดจาก “ไม่มีข้อมูลจริง” จะมีค่าเลขเป็น 0 และฟิลด์ข้อความจำนวนมากอาจไม่มีค่า (ละเว้นจาก JSON) — ควรตีความว่าเป็น “zeroed row”
   - ตัวอย่างตอบกลับ:
     {
       "items": [
         {
+          "fiscal_year": 2026,
           "year_month": "202410",
           "branch_code": "BA01",
           "org_name": "BA01",
@@ -117,12 +118,13 @@ API Spec: BigMeter Sync (REST v1)
           "is_zeroed": false
         },
         {
+          "fiscal_year": 2026,
           "year_month": "202410",
-          "branch_code": "BA01",
-          "org_name": null,
-          "cust_code": "C99999",
-          "use_type": "R",
-          "use_name": null,
+      "branch_code": "BA01",
+      "org_name": null,
+      "cust_code": "C99999",
+      "use_type": "R",
+      "use_name": null,
           "cust_name": null,
           "address": null,
           "route_code": null,
@@ -135,17 +137,18 @@ API Spec: BigMeter Sync (REST v1)
           "present_water_usg": 0,
           "debt_ym": "202410",
           "created_at": "2024-10-16T08:05:02Z",
-          "is_zeroed": true
-        }
-      ],
-      "total": 200,
-      "limit": 50,
+      "is_zeroed": true
+    }
+  ],
+  "total": 200,
+  "limit": 50,
       "offset": 0
     }
+  - หมายเหตุ: หากมีหลายปีงบประมาณในเดือนเดียวกัน ระบบจะเลือกปีงบล่าสุดโดยอัตโนมัติ เว้นแต่ส่ง `fiscal_year`
 
 - GET `/custcodes/{cust_code}/details`
   - อธิบาย: ดูประวัติรายเดือนสำหรับลูกค้ารายหนึ่งในช่วงเดือน
-  - คิวรี: `branch` (จำเป็น), `from` (YYYYMM, จำเป็น), `to` (YYYYMM, จำเป็น)
+  - คิวรี: `branch` (จำเป็น), `from` (YYYYMM, จำเป็น), `to` (YYYYMM, จำเป็น), `fiscal_year` (ไม่จำเป็น)
   - 200 OK
   - ตัวอย่างตอบกลับ:
     {
@@ -154,20 +157,21 @@ API Spec: BigMeter Sync (REST v1)
       "from": "202410",
       "to": "202503",
       "series": [
-        {"ym": "202410", "present_water_usg": 15.0, "is_zeroed": false},
-        {"ym": "202411", "present_water_usg": 0.0,  "is_zeroed": true}
+        {"ym": "202410", "fiscal_year": 2026, "present_water_usg": 15.0, "is_zeroed": false},
+        {"ym": "202411", "fiscal_year": 2026, "present_water_usg": 0.0,  "is_zeroed": true}
       ]
     }
 
 - GET `/details/summary`
   - อธิบาย: สรุปภาพรวมรายเดือนในสาขา
-  - คิวรี: `ym` (จำเป็น), `branch` (จำเป็น)
+  - คิวรี: `ym` (จำเป็น), `branch` (จำเป็น), `fiscal_year` (ไม่จำเป็น)
   - คำนิยาม `is_zeroed`: แถวที่ `present_water_usg == 0` และ `present_meter_count == 0` และ `org_name` ว่างหรือไม่มีค่า
   - 200 OK
   - ตัวอย่างตอบกลับ:
     {
       "ym": "202410",
       "branch": "BA01",
+      "fiscal_year": 2026,
       "total": 200,
       "zeroed": 15,
       "active": 185,

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { Scale, Shape } from "@visx/visx";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { getBranches } from "../api/branches";
 import type { BranchItem } from "../api/branches";
@@ -6,8 +7,7 @@ import { getCustCodes } from "../api/custcodes";
 import type { CustCodeItem } from "../api/custcodes";
 import { getDetails } from "../api/details";
 import type { DetailItem } from "../api/details";
-
-type ViewMode = "compact" | "expanded";
+import { useMediaQuery } from "../lib/useMediaQuery";
 
 type AppliedFilters = {
   branch: string;
@@ -34,14 +34,15 @@ type Row = {
 };
 
 const DEFAULT_THRESHOLD = 10;
-const DEFAULT_COMPACT_MONTHS = 6;
 const MAX_HISTORY_MONTHS = 12;
-const COMPACT_OPTIONS = [3, 6, 12] as const;
+const MONTH_OPTIONS = [3, 6, 12] as const;
 const STORAGE_KEYS = {
   threshold: "detail.threshold",
-  compact: "detail.compact",
-  compactMonths: "detail.compactMonths",
+  months: "detail.months",
 };
+
+const { scaleLinear } = Scale;
+const { AreaClosed, LinePath } = Shape;
 
 export default function DetailPage() {
   const [branch, setBranch] = useState("");
@@ -49,34 +50,29 @@ export default function DetailPage() {
   const [threshold, setThreshold] = useState(() =>
     loadNumber(STORAGE_KEYS.threshold, DEFAULT_THRESHOLD),
   );
-  const [view, setView] = useState<ViewMode>(() =>
-    loadBoolean(STORAGE_KEYS.compact, true) ? "compact" : "expanded",
-  );
-  const [compactMonths, setCompactMonths] = useState(() =>
-    coerceCompactMonths(
-      loadNumber(STORAGE_KEYS.compactMonths, DEFAULT_COMPACT_MONTHS),
-    ),
-  );
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [applied, setApplied] = useState<AppliedFilters | null>(null);
+  const [historyMonths, setHistoryMonths] = useState(() =>
+    coerceHistoryMonths(
+      loadNumber(STORAGE_KEYS.months, MONTH_OPTIONS[1]),
+    ),
+  );
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const effectiveMonths = isMobile ? 3 : historyMonths;
 
   useEffect(() => {
     persistNumber(STORAGE_KEYS.threshold, threshold);
   }, [threshold]);
 
   useEffect(() => {
-    persistBoolean(STORAGE_KEYS.compact, view === "compact");
-  }, [view]);
-
-  useEffect(() => {
-    persistNumber(STORAGE_KEYS.compactMonths, compactMonths);
-  }, [compactMonths]);
+    persistNumber(STORAGE_KEYS.months, historyMonths);
+  }, [historyMonths]);
 
   useEffect(() => {
     setPage(1);
-  }, [threshold, search, pageSize, view, compactMonths]);
+  }, [threshold, search, pageSize, effectiveMonths]);
 
   const branchesQuery = useQuery({
     queryKey: ["branches"],
@@ -141,8 +137,8 @@ export default function DetailPage() {
     (page - 1) * pageSize + pageSize,
   );
   const monthsToDisplay = useMemo(
-    () => (view === "expanded" ? monthsAll : monthsAll.slice(0, compactMonths)),
-    [monthsAll, view, compactMonths],
+    () => monthsAll.slice(0, effectiveMonths),
+    [monthsAll, effectiveMonths],
   );
 
   const isLoading =
@@ -171,8 +167,7 @@ export default function DetailPage() {
     const nextYm = defaultLatestYm();
     setLatestYm(nextYm);
     setThreshold(DEFAULT_THRESHOLD);
-    setView("compact");
-    setCompactMonths(DEFAULT_COMPACT_MONTHS);
+    setHistoryMonths(MONTH_OPTIONS[1]);
     setSearch("");
     setPage(1);
     setPageSize(10);
@@ -326,12 +321,12 @@ export default function DetailPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
+            <div className="flex flex-wrap items-center gap-2 md:justify-end">
+              <div className="relative w-full md:w-auto">
                 <input
                   type="text"
                   placeholder="ค้นหาในตาราง..."
-                  className="w-64 rounded-md border border-slate-300 py-2 pl-3 pr-10 text-sm"
+                  className="w-full rounded-md border border-slate-300 py-2 pl-3 pr-10 text-sm md:w-64"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                 />
@@ -348,41 +343,28 @@ export default function DetailPage() {
                 Export
               </button>
 
-              <div className="inline-flex rounded-lg bg-slate-200 p-1 text-sm font-medium">
-                <button
-                  type="button"
-                  className={`rounded-md px-3 py-1 ${view === "compact" ? "bg-white text-blue-600 shadow" : "text-slate-600"}`}
-                  onClick={() => setView("compact")}
-                >
-                  ย่อ
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-md px-3 py-1 ${view === "expanded" ? "bg-white text-blue-600 shadow" : "text-slate-600"}`}
-                  onClick={() => setView("expanded")}
-                >
-                  ขยาย
-                </button>
-              </div>
-
-              {view === "compact" && (
-                <div className="inline-flex rounded-md border border-slate-300 text-sm">
-                  {COMPACT_OPTIONS.map((option, index) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => setCompactMonths(option)}
-                      className={`px-3 py-1 ${
-                        compactMonths === option
-                          ? "bg-blue-50 text-blue-700"
-                          : "text-slate-700"
-                      } ${index === 0 ? "rounded-l-md" : ""} ${index === COMPACT_OPTIONS.length - 1 ? "rounded-r-md" : "border-r border-slate-300"}`}
-                    >
-                      {option} เดือน
-                    </button>
-                  ))}
+              <div className="hidden items-center gap-3 text-sm md:flex">
+                <span className="text-slate-600">ช่วงข้อมูล:</span>
+                <div className="inline-flex overflow-hidden rounded-md border border-slate-300">
+                  {MONTH_OPTIONS.map((option, index) => {
+                    const isActive = historyMonths === option;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setHistoryMonths(option)}
+                        className={`px-3 py-1 text-sm font-medium ${
+                          isActive
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-white text-slate-600 hover:bg-slate-50"
+                        } ${index !== MONTH_OPTIONS.length - 1 ? "border-r border-slate-300" : ""}`}
+                      >
+                        {option} เดือน
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
               <div className="flex items-center gap-2 text-sm">
                 <label className="text-slate-600">แสดง:</label>
@@ -441,6 +423,11 @@ export default function DetailPage() {
   );
 }
 
+type TrendPoint = {
+  ym: string;
+  value: number;
+};
+
 function DataTable({
   rows,
   months,
@@ -456,51 +443,54 @@ function DataTable({
   const prevYm = months[1];
   return (
     <div className="mt-6 overflow-x-auto">
-      <table className="min-w-full text-sm">
+      <table className="min-w-full text-xs md:text-sm">
         <thead className="bg-slate-100 text-slate-700">
           <tr>
             <th className="p-3 text-left">ลำดับ</th>
-            <th className="p-3 text-left">กปภ.สาขา</th>
+            <th className="hidden p-3 text-left md:table-cell">กปภ.สาขา</th>
             <th className="p-3 text-left">เลขที่ผู้ใช้น้ำ</th>
-            <th className="p-3 text-left">ประเภท</th>
-            <th className="p-3 text-left">รายละเอียด</th>
+            <th className="hidden p-3 text-left md:table-cell">ประเภท</th>
+            <th className="hidden p-3 text-left md:table-cell">รายละเอียด</th>
             <th className="p-3 text-left">ชื่อผู้ใช้น้ำ</th>
             <th className="p-3 text-left">ที่อยู่</th>
-            <th className="p-3 text-left">เส้นทาง</th>
-            <th className="p-3 text-left">หมายเลขมาตร</th>
+            <th className="hidden p-3 text-left md:table-cell">เส้นทาง</th>
+            <th className="hidden p-3 text-left md:table-cell">หมายเลขมาตร</th>
             <th className="p-3 text-left">ขนาดมาตร</th>
-            <th className="p-3 text-left">ยี่ห้อ</th>
-            <th className="p-3 text-left">สถานะมาตร</th>
+            <th className="hidden p-3 text-left md:table-cell">ยี่ห้อ</th>
+            <th className="hidden p-3 text-left md:table-cell">สถานะมาตร</th>
             <th className="p-3 text-right">หน่วยน้ำเฉลี่ย</th>
             <th className="p-3 text-right">เลขมาตรที่อ่านได้</th>
-            <th className="p-3 text-right">หน่วยน้ำเดือนนี้</th>
-            {months.slice(1).map((ym) => (
+            {months.map((ym) => (
               <th key={ym} className="p-3 text-right">
-                {fmtThMonth(ym)}
+                <MonthHeader ym={ym} />
               </th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200">
           {rows.map((row, index) => {
-            const latestValue = row.values[latestYm] ?? 0;
-            const pct = prevYm
-              ? computePct(row.values[prevYm], latestValue)
-              : null;
+            const historyData = months.map((monthYm) => ({
+              ym: monthYm,
+              value: row.values[monthYm] ?? 0,
+            }));
             return (
               <tr key={row.key} className="hover:bg-slate-50">
                 <td className="p-3">{baseIndex + index + 1}</td>
-                <td className="p-3">{row.orgName ?? row.branchCode}</td>
+                <td className="hidden p-3 md:table-cell">
+                  {row.orgName ?? row.branchCode}
+                </td>
                 <td className="p-3 font-mono">{row.custCode}</td>
-                <td className="p-3">{row.useType ?? "-"}</td>
-                <td className="p-3">{row.useName ?? "-"}</td>
+                <td className="hidden p-3 md:table-cell">{row.useType ?? "-"}</td>
+                <td className="hidden p-3 md:table-cell">{row.useName ?? "-"}</td>
                 <td className="p-3">{row.custName ?? "-"}</td>
                 <td className="p-3">{row.address ?? "-"}</td>
-                <td className="p-3">{row.routeCode ?? "-"}</td>
-                <td className="p-3 font-mono">{row.meterNo ?? "-"}</td>
+                <td className="hidden p-3 md:table-cell">{row.routeCode ?? "-"}</td>
+                <td className="hidden p-3 font-mono md:table-cell">
+                  {row.meterNo ?? "-"}
+                </td>
                 <td className="p-3 text-center">{row.meterSize ?? "-"}</td>
-                <td className="p-3">{row.meterBrand ?? "-"}</td>
-                <td className="p-3">{row.meterState ?? "-"}</td>
+                <td className="hidden p-3 md:table-cell">{row.meterBrand ?? "-"}</td>
+                <td className="hidden p-3 md:table-cell">{row.meterState ?? "-"}</td>
                 <td className="p-3 text-right">
                   {row.average != null ? fmtNum(row.average) : "-"}
                 </td>
@@ -509,20 +499,173 @@ function DataTable({
                     ? fmtNum(row.presentMeterCount)
                     : "-"}
                 </td>
-                <td className="p-3 text-right">
-                  {renderCurrentMonth(latestValue, pct)}
-                </td>
-                {months.slice(1).map((ym) => (
-                  <td key={ym} className="p-3 text-right">
-                    {fmtNum(row.values[ym] ?? 0)}
-                  </td>
-                ))}
+                {months.map((ym, monthIndex) => {
+                  const value = historyData[monthIndex].value;
+                  if (monthIndex === 0) {
+                    const pct = prevYm
+                      ? computePct(row.values[prevYm], value)
+                      : null;
+                    return (
+                      <td key={ym} className="p-3 text-right">
+                        <LatestUsageCell
+                          value={value}
+                          pct={pct}
+                          history={historyData}
+                         />
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={ym} className="p-3 text-right">
+                      {fmtNum(value)}
+                    </td>
+                  );
+                })}
               </tr>
             );
           })}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function LatestUsageCell({
+  value,
+  pct,
+  history,
+}: {
+  value: number;
+  pct: number | null;
+  history: TrendPoint[];
+}) {
+  const [isHover, setIsHover] = useState(false);
+  const pctText =
+    pct != null && isFinite(pct) && pct !== 0 ? ` (${fmtPct(pct)})` : "";
+  const badgeClass = resolveBadgeClass(pct);
+  const showSparkline = isHover && history.length > 1;
+  const latestLabel = fmtThMonthParts(history[0].ym);
+
+  return (
+    <div
+      className="relative flex justify-end focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+      onFocus={() => setIsHover(true)}
+      onBlur={() => setIsHover(false)}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setIsHover(false);
+      }}
+      tabIndex={0}
+      role="button"
+      aria-haspopup="dialog"
+      aria-expanded={showSparkline}
+      aria-label={`ดูแนวโน้มล่าสุดสำหรับเดือน ${latestLabel.label} ${latestLabel.year}`}
+    >
+      <span className={`inline-block rounded px-2 py-1 text-xs md:text-sm ${badgeClass}`}>
+        {fmtNum(value)}
+        {pctText}
+      </span>
+      {showSparkline && (
+        <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-lg border border-slate-200 bg-white p-3 text-[10px] text-slate-500 shadow-lg">
+          <TrendSparkline data={history} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrendSparkline({ data }: { data: TrendPoint[] }) {
+  const ordered = useMemo(() => [...data].reverse(), [data]);
+  if (!ordered.length) return null;
+  const gradientId = useId();
+  const width = 160;
+  const height = 60;
+  const padding = 8;
+
+  const values = ordered.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const domainMin = min === max ? min - 1 : min;
+  const domainMax = min === max ? max + 1 : max;
+  const xDomainMax = Math.max(ordered.length - 1, 1);
+
+  const xScale = useMemo(
+    () =>
+      scaleLinear({
+        domain: [0, xDomainMax],
+        range: [0, width],
+      }),
+    [xDomainMax, width],
+  );
+  const yScale = useMemo(
+    () =>
+      scaleLinear({
+        domain: [domainMin, domainMax],
+        range: [height - padding, padding],
+      }),
+    [domainMin, domainMax, height, padding],
+  );
+
+  const oldest = ordered[0];
+  const latest = ordered[ordered.length - 1];
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-wide text-slate-400">
+        <span>
+          {fmtThMonthParts(oldest.ym).label} {fmtThMonthParts(oldest.ym).year}
+        </span>
+        <span>
+          {fmtThMonthParts(latest.ym).label} {fmtThMonthParts(latest.ym).year}
+        </span>
+      </div>
+      <svg width={width} height={height} role="presentation">
+        <defs>
+          <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.4} />
+            <stop offset="100%" stopColor="#2563eb" stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+        <AreaClosed
+          data={ordered}
+          x={(point, index) => xScale(index) ?? 0}
+          y={(point) => yScale(point.value) ?? 0}
+          yScale={yScale}
+          fill={`url(#${gradientId})`}
+          stroke="none"
+        />
+        <LinePath
+          data={ordered}
+          x={(point, index) => xScale(index) ?? 0}
+          y={(point) => yScale(point.value) ?? 0}
+          stroke="#2563eb"
+          strokeWidth={2}
+        />
+        <circle
+          cx={xScale(ordered.length - 1)}
+          cy={yScale(latest.value)}
+          r={3}
+          fill="#2563eb"
+          stroke="white"
+          strokeWidth={1.5}
+        />
+      </svg>
+      <div className="flex items-center justify-between text-[10px] text-slate-600">
+        <span>{fmtNum(oldest.value)}</span>
+        <span className="font-medium text-slate-700">{fmtNum(latest.value)}</span>
+      </div>
+    </div>
+  );
+}
+
+function MonthHeader({ ym }: { ym: string }) {
+  const parts = fmtThMonthParts(ym);
+  return (
+    <span className="flex flex-col items-end leading-tight text-[10px] md:text-xs lg:text-sm">
+      <span>{parts.label}</span>
+      <span>{parts.year}</span>
+    </span>
   );
 }
 
@@ -644,19 +787,6 @@ function LoadingState() {
 }
 
 type KnownError = Error & { status?: number };
-
-function renderCurrentMonth(value: number, pct: number | null) {
-  const pctText =
-    pct != null && isFinite(pct) && pct !== 0 ? ` (${fmtPct(pct)})` : "";
-  const badgeClass = resolveBadgeClass(pct);
-  return (
-    <span className={`inline-block rounded px-2 py-1 text-xs ${badgeClass}`}>
-      {fmtNum(value)}
-      {pctText}
-    </span>
-  );
-}
-
 function resolveBadgeClass(pct: number | null) {
   if (pct == null || !isFinite(pct) || pct >= 0)
     return "bg-slate-100 text-slate-800";
@@ -823,24 +953,30 @@ const TH_MONTHS = [
   "ธันวาคม",
 ];
 
+const TH_MONTH_ABBR = [
+  "ม.ค.",
+  "ก.พ.",
+  "มี.ค.",
+  "เม.ย.",
+  "พ.ค.",
+  "มิ.ย.",
+  "ก.ค.",
+  "ส.ค.",
+  "ก.ย.",
+  "ต.ค.",
+  "พ.ย.",
+  "ธ.ค.",
+] as const;
+
 function fmtThMonth(ym: string) {
-  const abbreviations = [
-    "ม.ค.",
-    "ก.พ.",
-    "มี.ค.",
-    "เม.ย.",
-    "พ.ค.",
-    "มิ.ย.",
-    "ก.ค.",
-    "ส.ค.",
-    "ก.ย.",
-    "ต.ค.",
-    "พ.ย.",
-    "ธ.ค.",
-  ];
+  const parts = fmtThMonthParts(ym);
+  return `${parts.label} ${parts.year}`;
+}
+
+function fmtThMonthParts(ym: string) {
   const year = Number(ym.slice(0, 4)) + 543;
   const month = Number(ym.slice(4, 6));
-  return `${abbreviations[month - 1]} ${String(year).slice(-2)}`;
+  return { label: TH_MONTH_ABBR[month - 1], year: String(year).slice(-2) };
 }
 
 function ymParts(ym: string) {
@@ -885,27 +1021,16 @@ function loadNumber(key: string, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function loadBoolean(key: string, fallback: boolean) {
-  if (typeof window === "undefined") return fallback;
-  const raw = window.localStorage.getItem(key);
-  if (raw == null) return fallback;
-  return raw === "true";
-}
-
 function persistNumber(key: string, value: number) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(key, String(value));
 }
 
-function persistBoolean(key: string, value: boolean) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, value ? "true" : "false");
-}
-
-function coerceCompactMonths(value: number) {
-  if (COMPACT_OPTIONS.includes(value as (typeof COMPACT_OPTIONS)[number]))
+function coerceHistoryMonths(value: number) {
+  if (MONTH_OPTIONS.includes(value as (typeof MONTH_OPTIONS)[number])) {
     return value;
-  return DEFAULT_COMPACT_MONTHS;
+  }
+  return MONTH_OPTIONS[1];
 }
 
 function formatBranchLabel(item: BranchItem) {
