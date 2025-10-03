@@ -5,6 +5,15 @@ import tailwind from '@tailwindcss/vite'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const api = env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const loginEndpoint = env.VITE_LOGIN_API || 'https://intranet.pwa.co.th/login/webservice_login6.php'
+
+  let loginUrl: URL | null = null
+  try {
+    loginUrl = new URL(loginEndpoint)
+  } catch (error) {
+    console.warn('[vite] invalid VITE_LOGIN_API value, falling back to default proxy path', error)
+  }
+
   return {
     plugins: [react(), tailwind()],
     server: {
@@ -15,6 +24,16 @@ export default defineConfig(({ mode }) => {
           target: api,
           changeOrigin: true,
         },
+        ...(loginUrl
+          ? {
+              '/auth/login': {
+                target: `${loginUrl.protocol}//${loginUrl.host}`,
+                changeOrigin: true,
+                secure: false,
+                rewrite: () => loginUrl!.pathname,
+              },
+            }
+          : {}),
       },
     },
   }

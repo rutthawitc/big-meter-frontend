@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Scale, Shape } from "@visx/visx";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { getBranches } from "../api/branches";
@@ -7,7 +8,7 @@ import { getCustCodes } from "../api/custcodes";
 import type { CustCodeItem } from "../api/custcodes";
 import { getDetails } from "../api/details";
 import type { DetailItem } from "../api/details";
-import { exportDetailsToXlsx } from "../lib/exportDetailsXlsx";
+import { useAuth } from "../lib/auth";
 import { useMediaQuery } from "../lib/useMediaQuery";
 
 type AppliedFilters = {
@@ -46,6 +47,8 @@ const { scaleLinear } = Scale;
 const { AreaClosed, LinePath } = Shape;
 
 export default function DetailPage() {
+  const navigate = useNavigate();
+  const { user, hydrated, logout: signOut } = useAuth();
   const [branch, setBranch] = useState("");
   const [latestYm, setLatestYm] = useState(() => defaultLatestYm());
   const [threshold, setThreshold] = useState(() =>
@@ -62,6 +65,8 @@ export default function DetailPage() {
   );
   const isMobile = useMediaQuery("(max-width: 767px)");
   const effectiveMonths = isMobile ? 3 : historyMonths;
+  const isAuthenticated = hydrated && Boolean(user);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     persistNumber(STORAGE_KEYS.threshold, threshold);
@@ -78,13 +83,25 @@ export default function DetailPage() {
   const branchesQuery = useQuery({
     queryKey: ["branches"],
     queryFn: () => getBranches(),
+    enabled: isAuthenticated,
   });
+  const branches = branchesQuery.data?.items ?? [];
+  const defaultBranch = useMemo(() => {
+    if (!user?.ba) return null;
+    const matched = branches.find((branchItem) => branchItem.code === user.ba);
+    return matched ? matched.code : null;
+  }, [branches, user?.ba]);
+
+  useEffect(() => {
+    if (branch || !defaultBranch) return;
+    setBranch(defaultBranch);
+  }, [defaultBranch, branch]);
 
   const custcodesQuery = useQuery({
     queryKey: ["custcodes", applied?.branch, applied?.ym],
     queryFn: () =>
       getCustCodes({ branch: applied!.branch, ym: applied!.ym, limit: 200 }),
-    enabled: Boolean(applied),
+    enabled: Boolean(applied) && isAuthenticated,
   });
 
   const monthsAll = useMemo(
@@ -104,7 +121,7 @@ export default function DetailPage() {
           order_by: "present_water_usg",
           sort: "DESC",
         }),
-      enabled: Boolean(applied),
+      enabled: Boolean(applied) && isAuthenticated,
       select: (data: { items: DetailItem[] }) => data.items,
     })),
   });
@@ -145,9 +162,11 @@ export default function DetailPage() {
 
   const isLoading =
     Boolean(applied) &&
+    isAuthenticated &&
     (custcodesQuery.isLoading || detailQueries.some((q) => q.isLoading));
   const isFetching =
     Boolean(applied) &&
+    isAuthenticated &&
     (custcodesQuery.isFetching || detailQueries.some((q) => q.isFetching));
   const custcodesError =
     custcodesQuery.error instanceof Error
@@ -176,22 +195,50 @@ export default function DetailPage() {
     setApplied(null);
   }
 
-  function handleExport() {
+  function handleSignOut() {
+    signOut();
+    navigate("/", { replace: true });
+  }
+
+  async function handleExport() {
+    if (isExporting) return;
     if (!applied) return;
     if (!filteredRows.length) return;
     if (!monthsAll.length) return;
 
-    const branchPart = applied.branch
-      ? sanitizeFileNamePart(applied.branch)
-      : "all";
-    const fileName = `big-meter-${branchPart}-${applied.ym}.xlsx`;
+    setIsExporting(true);
 
-    exportDetailsToXlsx({
-      rows: filteredRows,
-      months: monthsAll,
-      monthLabels: exportMonthLabels,
-      fileName,
-    });
+    try {
+      const branchPart = applied.branch
+        ? sanitizeFileNamePart(applied.branch)
+        : "all";
+      const fileName = `big-meter-${branchPart}-${applied.ym}.xlsx`;
+
+      const { exportDetailsToXlsx } = await import("../lib/exportDetailsXlsx");
+      await exportDetailsToXlsx({
+        rows: filteredRows,
+        months: monthsAll,
+        monthLabels: exportMonthLabels,
+        fileName,
+      });
+    } catch (error) {
+      console.error("Export failed", error);
+      alert("ไม่สามารถส่งออกไฟล์ได้ กรุณาลองอีกครั้ง");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  if (!hydrated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-slate-600">
+        กำลังโหลด…
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace />;
   }
 
   return (
@@ -206,12 +253,19 @@ export default function DetailPage() {
               แดชบอร์ดสรุปข้อมูลการใช้น้ำ
             </p>
           </div>
-          <a
-            href="/"
-            className="text-sm font-medium text-slate-600 hover:text-blue-600"
-          >
-            Home
-          </a>
+          <div className="flex items-center gap-3">
+            <div className="text-right text-sm leading-tight">
+              <div className="font-semibold text-slate-700">{user.firstname}</div>
+              <div className="text-xs text-slate-500">{user.username}</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="rounded-md border border-slate-300 px-3 py-1 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+            >
+              ออกจากระบบ
+            </button>
+          </div>
         </header>
 
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -273,7 +327,7 @@ export default function DetailPage() {
                 onChange={(event) => setBranch(event.target.value)}
               >
                 <option value="">เลือกสาขา</option>
-                {(branchesQuery.data?.items ?? []).map((item) => (
+                {branches.map((item) => (
                   <option key={item.code} value={item.code}>
                     {formatBranchLabel(item)}
                   </option>
@@ -359,9 +413,9 @@ export default function DetailPage() {
                 type="button"
                 className="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={handleExport}
-                disabled={!applied || filteredRows.length === 0}
+                disabled={!applied || filteredRows.length === 0 || isExporting}
               >
-                Export
+                {isExporting ? "กำลังส่งออก…" : "Export"}
               </button>
 
               <div className="hidden items-center gap-3 text-sm md:flex">
