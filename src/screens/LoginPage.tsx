@@ -2,21 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth, type AuthUser } from "../lib/auth";
 
-const LOGIN_ENDPOINT = resolveEndpoint(
-  import.meta.env.VITE_LOGIN_API?.trim() || "/auth/login",
-);
-
-function resolveEndpoint(endpoint: string): string {
-  if (/^https?:\/\//i.test(endpoint)) {
-    return endpoint;
-  }
-  if (endpoint.startsWith("/")) {
-    const base = import.meta.env.BASE_URL || "/";
-    const normalizedBase = base === "/" ? "" : base.replace(/\/$/, "");
-    return `${normalizedBase}${endpoint}` || endpoint;
-  }
-  return endpoint;
-}
+const LOGIN_ENDPOINT = "/auth/login";
 
 type LoginResponse = AuthUser & {
   status: string;
